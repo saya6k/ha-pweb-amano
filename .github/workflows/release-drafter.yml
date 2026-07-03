@@ -53,6 +53,10 @@ jobs:
 
   sync-manifest-version:
     name: Sync manifest.json version
+    # Follows the stable draft's version only. A published rc tag therefore
+    # contains a manifest without the -rc.N suffix (e.g. tag v0.1.2-rc.0,
+    # manifest 0.1.2) — acceptable: HACS tracks the installed version by tag,
+    # so only HA's integration-info page shows the unsuffixed version.
     needs: draft
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
