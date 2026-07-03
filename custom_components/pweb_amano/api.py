@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
+import ssl
 
 import aiohttp
 
@@ -27,6 +28,52 @@ _LOGGER = logging.getLogger(__name__)
 _ILOT_AREA_RE = re.compile(r"^a(\d+)\.pweb\.kr$")
 _BALANCE_RE = re.compile(r"잔여\s*할인\s*</th>\s*<td>\s*([\d,]+)", re.DOTALL)
 _SITE_NAME_RE = re.compile(r"<title>(.*?)</title>", re.DOTALL)
+
+# PWEB hosts (*.pweb.kr) don't send their intermediate certificate during the
+# TLS handshake -- a real server misconfiguration, not a client trust issue.
+# The leaf cert chains to this GeoTrust intermediate, which itself chains to
+# DigiCert Global Root G2 (a standard trusted root already in any normal CA
+# bundle), so supplying just the missing intermediate completes the chain
+# without disabling verification. Fetched from the leaf cert's AIA "CA
+# Issuers" URL (http://cacerts.geotrust.com/GeoTrustTLSRSACAG1.crt).
+_GEOTRUST_TLS_RSA_CA_G1 = """-----BEGIN CERTIFICATE-----
+MIIEjTCCA3WgAwIBAgIQDQd4KhM/xvmlcpbhMf/ReTANBgkqhkiG9w0BAQsFADBh
+MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3
+d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBH
+MjAeFw0xNzExMDIxMjIzMzdaFw0yNzExMDIxMjIzMzdaMGAxCzAJBgNVBAYTAlVT
+MRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j
+b20xHzAdBgNVBAMTFkdlb1RydXN0IFRMUyBSU0EgQ0EgRzEwggEiMA0GCSqGSIb3
+DQEBAQUAA4IBDwAwggEKAoIBAQC+F+jsvikKy/65LWEx/TMkCDIuWegh1Ngwvm4Q
+yISgP7oU5d79eoySG3vOhC3w/3jEMuipoH1fBtp7m0tTpsYbAhch4XA7rfuD6whU
+gajeErLVxoiWMPkC/DnUvbgi74BJmdBiuGHQSd7LwsuXpTEGG9fYXcbTVN5SATYq
+DfbexbYxTMwVJWoVb6lrBEgM3gBBqiiAiy800xu1Nq07JdCIQkBsNpFtZbIZhsDS
+fzlGWP4wEmBQ3O67c+ZXkFr2DcrXBEtHam80Gp2SNhou2U5U7UesDL/xgLK6/0d7
+6TnEVMSUVJkZ8VeZr+IUIlvoLrtjLbqugb0T3OYXW+CQU0kBAgMBAAGjggFAMIIB
+PDAdBgNVHQ4EFgQUlE/UXYvkpOKmgP792PkA76O+AlcwHwYDVR0jBBgwFoAUTiJU
+IBiV5uNu5g/6+rkS7QYXjzkwDgYDVR0PAQH/BAQDAgGGMB0GA1UdJQQWMBQGCCsG
+AQUFBwMBBggrBgEFBQcDAjASBgNVHRMBAf8ECDAGAQH/AgEAMDQGCCsGAQUFBwEB
+BCgwJjAkBggrBgEFBQcwAYYYaHR0cDovL29jc3AuZGlnaWNlcnQuY29tMEIGA1Ud
+HwQ7MDkwN6A1oDOGMWh0dHA6Ly9jcmwzLmRpZ2ljZXJ0LmNvbS9EaWdpQ2VydEds
+b2JhbFJvb3RHMi5jcmwwPQYDVR0gBDYwNDAyBgRVHSAAMCowKAYIKwYBBQUHAgEW
+HGh0dHBzOi8vd3d3LmRpZ2ljZXJ0LmNvbS9DUFMwDQYJKoZIhvcNAQELBQADggEB
+AIIcBDqC6cWpyGUSXAjjAcYwsK4iiGF7KweG97i1RJz1kwZhRoo6orU1JtBYnjzB
+c4+/sXmnHJk3mlPyL1xuIAt9sMeC7+vreRIF5wFBC0MCN5sbHwhNN1JzKbifNeP5
+ozpZdQFmkCo+neBiKR6HqIA+LMTMCMMuv2khGGuPHmtDze4GmEGZtYLyF8EQpa5Y
+jPuV6k2Cr/N3XxFpT3hRpt/3usU/Zb9wfKPtWpoznZ4/44c1p9rzFcZYrWkj3A+7
+TNBJE0GmP2fhXhP1D/XVfIW/h0yCJGEiV9Glm/uGOa3DXHlmbAcxSyCRraG+ZBkA
+7h4SeM6Y8l/7MBRpPCz6l8Y=
+-----END CERTIFICATE-----
+"""
+
+
+def _build_ssl_context() -> ssl.SSLContext:
+    """Default trust store plus the intermediate PWEB's servers omit."""
+    context = ssl.create_default_context()
+    context.load_verify_locations(cadata=_GEOTRUST_TLS_RSA_CA_G1)
+    return context
+
+
+_SSL_CONTEXT = _build_ssl_context()
 
 
 def normalize_base_url(host: str) -> str:
@@ -59,7 +106,9 @@ async def async_fetch_site_name(host: str) -> str:
     """
     url = f"{normalize_base_url(host)}/login"
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(ssl=_SSL_CONTEXT)
+        ) as session:
             async with session.get(url) as response:
                 response.raise_for_status()
                 body = await response.text()
@@ -80,7 +129,10 @@ class PwebAmanoApiClient:
         self._user_id = user_id
         self._password = password
         self._ilot_area = extract_ilot_area(base_url)
-        self._session = aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar())
+        self._session = aiohttp.ClientSession(
+            cookie_jar=aiohttp.CookieJar(),
+            connector=aiohttp.TCPConnector(ssl=_SSL_CONTEXT),
+        )
 
     async def async_close(self) -> None:
         """Close the underlying session."""
