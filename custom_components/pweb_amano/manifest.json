@@ -1,7 +1,9 @@
 {
   "domain": "pweb_amano",
   "name": "PWEB Amano",
-  "codeowners": ["@saya6k"],
+  "codeowners": [
+    "@saya6k"
+  ],
   "config_flow": true,
   "documentation": "https://saya6k.github.io/ha-pweb-amano/",
   "iot_class": "cloud_polling",
