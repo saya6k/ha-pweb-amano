@@ -52,7 +52,8 @@ class PwebAmanoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             host = normalize_base_url(f"a{user_input[CONF_ILOT_AREA].strip()}.pweb.kr")
             try:
                 self._site_name = await async_fetch_site_name(host)
-            except PwebAmanoConnectionError:
+            except PwebAmanoConnectionError as err:
+                _LOGGER.warning("Could not fetch site name from %s: %s", host, err)
                 errors["base"] = "cannot_connect"
             else:
                 self._host = host
@@ -92,9 +93,11 @@ class PwebAmanoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
             try:
                 await client.async_login()
-            except PwebAmanoAuthError:
+            except PwebAmanoAuthError as err:
+                _LOGGER.debug("Login rejected for %s: %s", self._host, err)
                 errors["base"] = "invalid_auth"
-            except PwebAmanoConnectionError:
+            except PwebAmanoConnectionError as err:
+                _LOGGER.warning("Could not reach %s: %s", self._host, err)
                 errors["base"] = "cannot_connect"
             else:
                 return self.async_create_entry(
