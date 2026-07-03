@@ -67,6 +67,20 @@ scripts/develop          # boots HA on :8123 with this integration mounted
 
 No automated test suite. Validate by adding the integration via Settings → Devices & Services with a real account and watching `home-assistant.log`.
 
+## Release workflow
+
+This repo (and other `ha-*` HACS components, excluding `ha-app*`) ships on a
+two-track rolling draft release, maintained by release-drafter since
+`0f908fb` (#7): a `rc` (prerelease) draft and a `stable` draft, both updated
+continuously as PRs merge to `main`.
+
+1. Verify locally with the devcontainer (`scripts/develop`) before merging —
+   see Testing above.
+2. Once merged and the `rc` draft looks right, publish it as a prerelease
+   from the GitHub Releases UI.
+3. After the prerelease has been exercised with no issues, promote/publish
+   the corresponding `stable` draft.
+
 ## When in doubt
 
 - Login fails with 500? Read the JSON body's `errorMsg` — the site returns a human-readable reason.
