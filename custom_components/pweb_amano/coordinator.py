@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .api import PwebAmanoApiClient
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
@@ -51,7 +52,7 @@ class PwebAmanoCoordinator(DataUpdateCoordinator[dict]):
         summary_rows = today_state.get("summary") or [{}]
 
         return {
-            "last_sync": datetime.now(),
+            "last_sync": dt_util.utcnow(),
             "balance": balance,
             "registration_summary": summary_rows[0],
             "new_exits": self._detect_new_exits(window_state.get("data") or []),
