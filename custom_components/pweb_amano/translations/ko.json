@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "host": "포털 호스트 (예: a17589.pweb.kr)",
+          "username": "아이디",
+          "password": "비밀번호"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "아이디 또는 비밀번호가 올바르지 않습니다",
+      "cannot_connect": "포털에 연결할 수 없습니다"
+    },
+    "abort": {
+      "already_configured": "이미 등록된 계정입니다"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "last_sync": {
+        "name": "마지막 동기화"
+      }
+    }
+  }
+}
