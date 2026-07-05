@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from homeassistant.components.event import EventEntity
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -25,7 +26,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the event platform."""
     async_add_entities(
-        [PwebAmanoVehicleExitEvent(entry.runtime_data, entry.entry_id)]
+        [PwebAmanoVehicleExitEvent(entry.runtime_data, entry)]
     )
 
 
@@ -36,13 +37,14 @@ class PwebAmanoVehicleExitEvent(CoordinatorEntity[PwebAmanoCoordinator], EventEn
     _attr_translation_key = "vehicle_exit"
     _attr_event_types = ["exit"]
 
-    def __init__(self, coordinator: PwebAmanoCoordinator, entry_id: str) -> None:
+    def __init__(self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"{entry_id}_vehicle_exit"
+        self._attr_unique_id = f"{entry.entry_id}_vehicle_exit"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry_id)},
-            name="PWEB Amano",
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=entry.title,
             manufacturer="Amano Korea",
+            entry_type=DeviceEntryType.SERVICE,
         )
 
     @callback

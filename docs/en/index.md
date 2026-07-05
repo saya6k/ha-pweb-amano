@@ -1,6 +1,6 @@
 # PWEB Amano — Home Assistant Integration
 
-A Home Assistant custom integration for **PWEB** (Amano Korea apartment/officetel management portals) — sites like `https://a17589.pweb.kr`. These portals have no public API, so this integration logs in with your ID/password and parses the site's HTML.
+A Home Assistant custom integration for **PWEB** (Amano Korea apartment/officetel management portals) — sites like `https://a12345.pweb.kr`. These portals have no public API, so this integration logs in with your ID/password and parses the site's HTML.
 
 ## Status
 
@@ -11,7 +11,7 @@ Early scaffold. Login/session handling works; dashboard data parsing (parking, n
 1. HACS → Integrations → ⋮ → Custom repositories → add this repo as an "Integration".
 2. Install **PWEB Amano**, restart Home Assistant.
 3. Settings → Devices & Services → Add Integration → **PWEB Amano**.
-4. Enter your portal host (e.g. `a17589.pweb.kr`), ID, and password.
+4. Enter your portal host (e.g. `a12345.pweb.kr`), ID, and password.
 
 ## Security
 
