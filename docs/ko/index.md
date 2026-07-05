@@ -1,6 +1,6 @@
 # PWEB Amano — Home Assistant 통합구성요소
 
-**PWEB**(아마노코리아 관리사무소 시스템) 아파트/오피스텔 관리 포털용 Home Assistant 커스텀 통합구성요소입니다 — `https://a17589.pweb.kr` 같은 사이트가 대상입니다. 공개 API가 없어 아이디/비밀번호로 직접 로그인 후 HTML을 파싱합니다.
+**PWEB**(아마노코리아 관리사무소 시스템) 아파트/오피스텔 관리 포털용 Home Assistant 커스텀 통합구성요소입니다 — `https://a12345.pweb.kr` 같은 사이트가 대상입니다. 공개 API가 없어 아이디/비밀번호로 직접 로그인 후 HTML을 파싱합니다.
 
 ## 현재 상태
 
@@ -11,7 +11,7 @@
 1. HACS → Integrations → ⋮ → Custom repositories → 이 저장소를 "Integration"으로 추가.
 2. **PWEB Amano** 설치 후 Home Assistant 재시작.
 3. 설정 → 기기 및 서비스 → 통합구성요소 추가 → **PWEB Amano**.
-4. 포털 호스트(예: `a17589.pweb.kr`), 아이디, 비밀번호를 입력.
+4. 포털 호스트(예: `a12345.pweb.kr`), 아이디, 비밀번호를 입력.
 
 ## 보안
 

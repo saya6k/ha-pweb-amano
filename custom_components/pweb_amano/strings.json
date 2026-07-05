@@ -2,9 +2,9 @@
   "config": {
     "step": {
       "user": {
-        "description": "Enter the numeric lot-area code from your portal's address, e.g. 17589 for a17589.pweb.kr.",
+        "description": "Enter the numeric lot-area code from your portal's address, e.g. 12345 for a12345.pweb.kr.",
         "data": {
-          "ilot_area": "Lot-area code (e.g. 17589)"
+          "ilot_area": "Lot-area code (e.g. 12345)"
         }
       },
       "confirm": {
@@ -48,6 +48,11 @@
       "vehicle_exit": {
         "name": "Vehicle exit"
       }
+    },
+    "button": {
+      "refresh": {
+        "name": "Refresh"
+      }
     }
   },
   "services": {
@@ -57,7 +62,7 @@
       "fields": {
         "device_id": {
           "name": "Device",
-          "description": "The PWEB Amano device to act on."
+          "description": "The parking management system (site) to register the discount with."
         },
         "car_no": {
           "name": "Car number",
@@ -73,7 +78,7 @@
         },
         "entry_date": {
           "name": "Entry date",
-          "description": "Date the vehicle entered, if not yesterday."
+          "description": "Date the vehicle entered. If left blank, both yesterday and today are searched."
         }
       }
     }
