@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -27,7 +28,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the calendar platform."""
     async_add_entities(
-        [PwebAmanoDiscountHistoryCalendar(entry.runtime_data, entry.entry_id)]
+        [PwebAmanoDiscountHistoryCalendar(entry.runtime_data, entry)]
     )
 
 
@@ -58,13 +59,14 @@ class PwebAmanoDiscountHistoryCalendar(
     _attr_has_entity_name = True
     _attr_translation_key = "discount_history"
 
-    def __init__(self, coordinator: PwebAmanoCoordinator, entry_id: str) -> None:
+    def __init__(self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"{entry_id}_discount_history"
+        self._attr_unique_id = f"{entry.entry_id}_discount_history"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry_id)},
-            name="PWEB Amano",
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=entry.title,
             manufacturer="Amano Korea",
+            entry_type=DeviceEntryType.SERVICE,
         )
 
     @property

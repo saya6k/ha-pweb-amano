@@ -9,7 +9,7 @@ from .api import PwebAmanoApiClient
 from .coordinator import PwebAmanoCoordinator
 from .services import async_register_services
 
-PLATFORMS = [Platform.SENSOR, Platform.CALENDAR, Platform.EVENT]
+PLATFORMS = [Platform.SENSOR, Platform.CALENDAR, Platform.EVENT, Platform.BUTTON]
 
 type PwebAmanoConfigEntry = ConfigEntry[PwebAmanoCoordinator]
 

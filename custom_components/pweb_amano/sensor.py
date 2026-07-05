@@ -7,6 +7,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -25,9 +26,9 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     async_add_entities(
         [
-            PwebAmanoLastSyncSensor(coordinator, entry.entry_id),
-            PwebAmanoDiscountBalanceSensor(coordinator, entry.entry_id),
-            PwebAmanoRegistrationStatusSensor(coordinator, entry.entry_id),
+            PwebAmanoLastSyncSensor(coordinator, entry),
+            PwebAmanoDiscountBalanceSensor(coordinator, entry),
+            PwebAmanoRegistrationStatusSensor(coordinator, entry),
         ]
     )
 
@@ -39,13 +40,14 @@ class PwebAmanoLastSyncSensor(CoordinatorEntity[PwebAmanoCoordinator], SensorEnt
     _attr_translation_key = "last_sync"
     _attr_device_class = SensorDeviceClass.TIMESTAMP
 
-    def __init__(self, coordinator: PwebAmanoCoordinator, entry_id: str) -> None:
+    def __init__(self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"{entry_id}_last_sync"
+        self._attr_unique_id = f"{entry.entry_id}_last_sync"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry_id)},
-            name="PWEB Amano",
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=entry.title,
             manufacturer="Amano Korea",
+            entry_type=DeviceEntryType.SERVICE,
         )
 
     @property
@@ -61,13 +63,14 @@ class PwebAmanoDiscountBalanceSensor(CoordinatorEntity[PwebAmanoCoordinator], Se
     _attr_native_unit_of_measurement = "원"
     _attr_state_class = SensorStateClass.MEASUREMENT
 
-    def __init__(self, coordinator: PwebAmanoCoordinator, entry_id: str) -> None:
+    def __init__(self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"{entry_id}_discount_balance"
+        self._attr_unique_id = f"{entry.entry_id}_discount_balance"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry_id)},
-            name="PWEB Amano",
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=entry.title,
             manufacturer="Amano Korea",
+            entry_type=DeviceEntryType.SERVICE,
         )
 
     @property
@@ -84,13 +87,14 @@ class PwebAmanoRegistrationStatusSensor(
     _attr_translation_key = "registration_status"
     _attr_state_class = SensorStateClass.MEASUREMENT
 
-    def __init__(self, coordinator: PwebAmanoCoordinator, entry_id: str) -> None:
+    def __init__(self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"{entry_id}_registration_status"
+        self._attr_unique_id = f"{entry.entry_id}_registration_status"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry_id)},
-            name="PWEB Amano",
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=entry.title,
             manufacturer="Amano Korea",
+            entry_type=DeviceEntryType.SERVICE,
         )
 
     @property
