@@ -57,6 +57,7 @@ hacs-pweb-amano/
 3. **The coordinator owns all network I/O.** Entities read `self.coordinator.data[...]`; they never call `api.py` directly.
 4. **`manifest.json` declares `iot_class: cloud_polling`.** Don't add push/websocket behavior.
 5. **Password never leaves memory as plaintext longer than needed.** Hash with `hashlib.sha256` right before the login POST; don't log the raw password or the hash.
+6. **Any datetime handed to HA must be timezone-aware.** `dt_util.as_local()`/`dt_util.utcnow()`, never naive `datetime.strptime()`/`datetime.now()`. HA validates this and raises: a naive `last_sync` broke the TIMESTAMP sensor (#12), and a naive `CalendarEvent.start`/`end` breaks the discount-history calendar for any date range containing at least one registration (`CalendarEvent.__post_init__` calls `_has_timezone`, raising `HomeAssistantError` - silently, since HA doesn't log it as an unhandled exception - whenever a naive datetime is used). The portal's timestamps are its own local wall-clock time with no explicit timezone, so parse naive then `dt_util.as_local()` (which attaches tzinfo as-is, no numeric shift) - don't treat them as UTC.
 6. **`brand/` assets are Amano Korea's official CI marks** (downloaded from amano.co.kr's public brand page: `icon.png` = the AMANO triangle mark padded to a square, `logo.png`/`dark_logo.png` = the "Time & Air / AMANO" wordmark, light/dark variants). Used solely to identify the integrated service — this is an unofficial, community-maintained integration, not published or endorsed by Amano Korea.
 
 ## Testing

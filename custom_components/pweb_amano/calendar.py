@@ -15,6 +15,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from . import PwebAmanoConfigEntry
 from .const import DOMAIN
@@ -33,11 +34,20 @@ async def async_setup_entry(
 
 
 def _parse_amano_datetime(value: str | None) -> datetime:
-    """Parse a yyyyMMddHHmmss (or bare yyyyMMdd) timestamp from the portal."""
+    """Parse a yyyyMMddHHmmss (or bare yyyyMMdd) timestamp from the portal.
+
+    The portal has no timezone concept of its own - these are wall-clock
+    times in whatever timezone the site operates in (assumed to match HA's
+    configured timezone). CalendarEvent requires aware datetimes, so localize
+    rather than leaving this naive - see dt_util.as_local: a naive value gets
+    HA's local tzinfo attached as-is, with no numeric shift.
+    """
     value = (value or "").strip()
     if len(value) >= 14:
-        return datetime.strptime(value[:14], "%Y%m%d%H%M%S")
-    return datetime.strptime(value[:8], "%Y%m%d")
+        parsed = datetime.strptime(value[:14], "%Y%m%d%H%M%S")
+    else:
+        parsed = datetime.strptime(value[:8], "%Y%m%d")
+    return dt_util.as_local(parsed)
 
 
 def _row_to_event(row: dict) -> CalendarEvent:
