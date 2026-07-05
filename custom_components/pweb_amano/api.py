@@ -250,12 +250,24 @@ class PwebAmanoApiClient:
         Mirrors the "할인등록" screen's car-number search
         (/discount/registration/listForDiscount). Requires iLotArea, which is
         derived from the configured host.
+
+        Confirmed live against a real currently-parked car: this search only
+        matches within one of the plate's two digit groups (e.g. "237" or
+        "2469" each match "237도2469" on their own) - it never matches a
+        query containing the Hangul character, or one spanning both groups
+        (e.g. "2372469"). So passing the full plate as typed always finds
+        nothing; search on the trailing digit run instead (a car's last few
+        digits is also the conventional way these lots identify a car by
+        ear). The full car_no is still used as-is for the actual
+        registration (async_register_discount) - only this search is picky.
         """
         if self._ilot_area is None:
             raise PwebAmanoRegistrationError(
                 "could not derive iLotArea from the configured host "
                 "(expected a<number>.pweb.kr)"
             )
+        match = re.search(r"\d+$", car_no)
+        search_term = match.group() if match else car_no
         url = f"{self._base_url}/discount/registration/listForDiscount"
         try:
             async with self._session.post(
@@ -263,7 +275,7 @@ class PwebAmanoApiClient:
                 data={
                     "iLotArea": self._ilot_area,
                     "entryDate": entry_date,
-                    "carNo": car_no,
+                    "carNo": search_term,
                 },
             ) as response:
                 response.raise_for_status()
