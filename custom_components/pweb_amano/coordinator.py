@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 from datetime import date, timedelta
 
+import aiohttp
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -11,7 +12,12 @@ from homeassistant.util import dt as dt_util
 
 from .api import PwebAmanoApiClient
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
-from .exceptions import PwebAmanoError
+from .exceptions import PwebAmanoConnectionError, PwebAmanoError
+
+try:  # HA 2026.12+: logs the first failure once at info instead of error on every poll
+    from homeassistant.helpers.update_coordinator import UpdateFailedUnreachable
+except ImportError:  # older cores
+    UpdateFailedUnreachable = UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,7 +56,14 @@ class PwebAmanoCoordinator(DataUpdateCoordinator[dict]):
             )
             discount_types = await self.client.async_fetch_discount_types()
         except PwebAmanoError as err:
-            raise UpdateFailed(str(err)) from err
+            # Unreachable = a connection error or timeout, not an HTTP error
+            # status or an unexpected page (also PwebAmanoConnectionError).
+            unreachable = isinstance(err, PwebAmanoConnectionError) and isinstance(
+                err.__cause__, (aiohttp.ClientConnectionError, TimeoutError)
+            )
+            raise (UpdateFailedUnreachable if unreachable else UpdateFailed)(
+                str(err)
+            ) from err
 
         summary_rows = today_state.get("summary") or [{}]
         new_entries, new_exits = self._detect_new_entries_and_exits(
