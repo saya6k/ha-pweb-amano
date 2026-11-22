@@ -10,6 +10,7 @@ import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.util import dt as dt_util
 
 from .api import PwebAmanoApiClient
 from .const import DOMAIN, SERVICE_LIST_UNREGISTERED_VEHICLES, SERVICE_REGISTER_DISCOUNT
@@ -99,45 +100,69 @@ async def async_register_discount_for_car(
     discount_type: str,
     memo: str = "",
     entry_date: date | None = None,
-) -> None:
+) -> str:
     """Find a currently-parked car and register a discount for it.
 
-    Shared by the register_discount service and the LLM tool.
+    Shared by the register_discount service and the LLM tool. Returns the
+    plate the discount was registered to.
     """
     # Visitor cars are the common case, and the caller usually doesn't
     # know (or care) whether the portal logged the entry as yesterday or
     # today (e.g. an overnight visitor) - the portal has no ranged
-    # search, so search both days and take the first match, unless the
-    # caller pinned an explicit entry_date.
+    # search, so search both days, unless the caller pinned an explicit
+    # entry_date.
     if entry_date:
         candidate_dates = [entry_date]
     else:
-        today = date.today()
+        today = dt_util.now().date()
         candidate_dates = [today - timedelta(days=1), today]
 
     try:
-        parked = []
+        # Unlike the coordinator's poll, this can run any time (e.g. from an
+        # LLM conversation) - don't rely on the last poll's session.
+        await client.async_login()
+        rows: dict[int, dict] = {}
         for candidate_date in candidate_dates:
-            parked = await client.async_find_parked_entry(
+            for row in await client.async_find_parked_entry(
                 car_no, candidate_date.strftime("%Y%m%d")
-            )
-            if parked:
-                break
-
-        if not parked:
-            searched = ", ".join(d.strftime("%Y%m%d") for d in candidate_dates)
-            raise HomeAssistantError(
-                f"차량 '{car_no}'을(를) 주차장에서 찾을 수 없습니다 "
-                f"(entry_date={searched})"
-            )
+            ):
+                rows[row["id"]] = row
+        row = _match_parked_entry(car_no, list(rows.values()))
         await client.async_register_discount(
-            pe_id=parked[0]["id"],
-            car_no=car_no,
+            pe_id=row["id"],
+            car_no=row["carNo"],
             discount_type=discount_type,
             memo=memo,
         )
     except PwebAmanoError as err:
         raise HomeAssistantError(str(err)) from err
+    return row["carNo"]
+
+
+def _match_parked_entry(car_no: str, rows: list[dict]) -> dict:
+    """Pick the one parked entry that is really `car_no`.
+
+    The portal's search only matches one of the plate's digit groups (see
+    api.async_find_parked_entry), so it can return other cars sharing those
+    digits - e.g. both 12가3456 and 77나3456 for "12가3456". Registering
+    the first row blindly would spend the discount on the wrong car, so
+    require an exact plate match. A digits-only car_no ("3456") is accepted
+    only when exactly one parked plate ends with it.
+    """
+    wanted = "".join(car_no.split())
+    plates = {row["id"]: "".join(str(row.get("carNo") or "").split()) for row in rows}
+    matches = [row for row in rows if plates[row["id"]] == wanted]
+    if not matches and wanted.isdigit():
+        matches = [row for row in rows if plates[row["id"]].endswith(wanted)]
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        raise HomeAssistantError(f"차량 '{car_no}'을(를) 주차장에서 찾을 수 없습니다")
+    found = ", ".join(sorted(plates[row["id"]] for row in matches))
+    raise HomeAssistantError(
+        f"'{car_no}'에 해당하는 주차 차량이 여러 대입니다 ({found}) - "
+        "전체 번호판을 지정하세요"
+    )
 
 
 async def async_find_unregistered_vehicles(
@@ -147,7 +172,7 @@ async def async_find_unregistered_vehicles(
 
     Shared by the list_unregistered_vehicles service and the LLM tool.
     """
-    today = date.today()
+    today = dt_util.now().date()
     entry_dates = [
         (today - timedelta(days=offset)).strftime("%Y%m%d")
         for offset in range(days)
