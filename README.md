@@ -29,6 +29,10 @@ Two services are available for on-demand actions:
 - **`pweb_amano.register_discount`** — registers a discount type for a currently-parked vehicle (by plate; not limited to your own tracked cars).
 - **`pweb_amano.list_unregistered_vehicles`** — lists currently-parked vehicles that don't have a discount registered yet.
 
+### Voice assistant / LLM tools
+
+Each configured site registers its own LLM API — **Amano Parking — `<site name>`** — that you attach explicitly to a conversation agent; it's never added to the shared Assist API. In **Settings → Voice assistants**, edit an agent and pick it in the LLM API selector to give the agent four tools: check the discount balance and today's usage, list parked cars without a discount, register a discount for a parked car, and look up parking history (entry/exit times) for a date range. Requires Home Assistant 2026.10 or newer.
+
 ## Installation (HACS)
 
 1. HACS → Integrations → ⋮ → Custom repositories → add this repo as an "Integration".

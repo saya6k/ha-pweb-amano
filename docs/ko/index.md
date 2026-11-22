@@ -23,6 +23,10 @@
 - **`pweb_amano.register_discount`** — 현재 주차된 차량(번호판 기준, 추적 중인 내 차량으로 한정되지 않음)에 할인을 등록.
 - **`pweb_amano.list_unregistered_vehicles`** — 현재 주차되어 있지만 아직 할인이 등록되지 않은 차량 목록을 조회.
 
+### 음성 비서 / LLM 도구
+
+설정된 사이트마다 **Amano Parking — `<사이트 이름>`** LLM API가 따로 등록되며, 대화 에이전트에 직접 연결해야 사용됩니다 (공용 Assist API에는 자동으로 추가되지 않음). **설정 → 음성 비서**에서 에이전트를 편집해 LLM API 선택란에서 고르면, 할인 잔액·오늘 사용량 조회, 할인 미등록 주차 차량 조회, 주차 중인 차량 할인 등록, 기간별 주차 내역(입차/출차 시각) 조회의 4가지 도구를 쓸 수 있습니다. Home Assistant 2026.10 이상이 필요합니다.
+
 ## 설치 (HACS)
 
 1. HACS → Integrations → ⋮ → Custom repositories → 이 저장소를 "Integration"으로 추가.
