@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+from datetime import timedelta
 
 import aiohttp
 from homeassistant.core import HomeAssistant
@@ -41,7 +41,7 @@ class PwebAmanoCoordinator(DataUpdateCoordinator[dict]):
         self._has_polled = False
 
     async def _async_update_data(self) -> dict:
-        today = date.today()
+        today = dt_util.now().date()
         today_str = today.strftime("%Y%m%d")
         window_start_str = (today - timedelta(days=1)).strftime("%Y%m%d")
 

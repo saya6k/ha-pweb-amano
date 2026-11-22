@@ -6,7 +6,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import llm
@@ -47,8 +47,12 @@ class BasePwebAmanoTool(llm.Tool):
         return hass.config_entries.async_get_entry(self.entry_id)
 
     def coordinator(self, hass: HomeAssistant) -> PwebAmanoCoordinator | None:
+        # An unloaded entry keeps its old runtime_data, whose HTTP session
+        # is already closed.
         entry = self.entry(hass)
-        return getattr(entry, "runtime_data", None) if entry is not None else None
+        if entry is None or entry.state is not ConfigEntryState.LOADED:
+            return None
+        return entry.runtime_data
 
     @staticmethod
     def error(message: str) -> llm.ToolResult:
@@ -145,8 +149,10 @@ class RegisterDiscountTool(BasePwebAmanoTool):
         "the account's discount quota/balance and cannot be undone here, so "
         "confirm the plate and discount type with the user unless they "
         "stated both explicitly. `discount_type` must be an id from "
-        "pweb_amano__get_parking_status. `car_no` is the plate; its digit "
-        "part alone (e.g. '3456') also matches."
+        "pweb_amano__get_parking_status. `car_no` should be the full plate "
+        "(e.g. '12가3456'); digits alone only work if exactly one parked car "
+        "ends with them, otherwise the error lists the candidates to ask "
+        "the user about."
     )
     parameters = vol.Schema(
         {
@@ -174,7 +180,7 @@ class RegisterDiscountTool(BasePwebAmanoTool):
                 f"{', '.join(sorted(discount_types))}"
             )
         try:
-            await async_register_discount_for_car(
+            plate = await async_register_discount_for_car(
                 coordinator.client,
                 car_no=args["car_no"],
                 discount_type=discount_type,
@@ -187,7 +193,7 @@ class RegisterDiscountTool(BasePwebAmanoTool):
         return llm.ToolResult(
             data={
                 "success": True,
-                "car_no": args["car_no"],
+                "car_no": plate,
                 "discount_type": discount_types.get(discount_type, discount_type),
             }
         )
