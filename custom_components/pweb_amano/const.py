@@ -9,3 +9,5 @@ SERVICE_REGISTER_DISCOUNT = "register_discount"
 SERVICE_LIST_UNREGISTERED_VEHICLES = "list_unregistered_vehicles"
 
 CONF_CAR_PLATES = "car_plates"
+
+LLM_API_NAME = "Amano Parking"

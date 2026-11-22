@@ -10,6 +10,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType
 from .api import PwebAmanoApiClient
 from .const import CONF_CAR_PLATES, DOMAIN
 from .coordinator import PwebAmanoCoordinator
+from .llm_api import async_register_llm_api
 from .services import async_register_services
 
 PLATFORMS = [Platform.SENSOR, Platform.CALENDAR, Platform.EVENT, Platform.BUTTON]
@@ -37,6 +38,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PwebAmanoConfigEntry) ->
     _async_remove_orphaned_vehicle_devices(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     async_register_services(hass)
+    async_register_llm_api(hass, entry)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True
 

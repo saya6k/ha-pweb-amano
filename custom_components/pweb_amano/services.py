@@ -93,45 +93,100 @@ def async_register_services(hass: HomeAssistant) -> None:
         )
 
 
+async def async_register_discount_for_car(
+    client: PwebAmanoApiClient,
+    car_no: str,
+    discount_type: str,
+    memo: str = "",
+    entry_date: date | None = None,
+) -> None:
+    """Find a currently-parked car and register a discount for it.
+
+    Shared by the register_discount service and the LLM tool.
+    """
+    # Visitor cars are the common case, and the caller usually doesn't
+    # know (or care) whether the portal logged the entry as yesterday or
+    # today (e.g. an overnight visitor) - the portal has no ranged
+    # search, so search both days and take the first match, unless the
+    # caller pinned an explicit entry_date.
+    if entry_date:
+        candidate_dates = [entry_date]
+    else:
+        today = date.today()
+        candidate_dates = [today - timedelta(days=1), today]
+
+    try:
+        parked = []
+        for candidate_date in candidate_dates:
+            parked = await client.async_find_parked_entry(
+                car_no, candidate_date.strftime("%Y%m%d")
+            )
+            if parked:
+                break
+
+        if not parked:
+            searched = ", ".join(d.strftime("%Y%m%d") for d in candidate_dates)
+            raise HomeAssistantError(
+                f"차량 '{car_no}'을(를) 주차장에서 찾을 수 없습니다 "
+                f"(entry_date={searched})"
+            )
+        await client.async_register_discount(
+            pe_id=parked[0]["id"],
+            car_no=car_no,
+            discount_type=discount_type,
+            memo=memo,
+        )
+    except PwebAmanoError as err:
+        raise HomeAssistantError(str(err)) from err
+
+
+async def async_find_unregistered_vehicles(
+    client: PwebAmanoApiClient, days: int
+) -> list[dict]:
+    """List parked cars from the last `days` days with no discount yet.
+
+    Shared by the list_unregistered_vehicles service and the LLM tool.
+    """
+    today = date.today()
+    entry_dates = [
+        (today - timedelta(days=offset)).strftime("%Y%m%d")
+        for offset in range(days)
+    ]
+
+    try:
+        # There's no "list every parked car" endpoint (see AGENTS.md) -
+        # the search only works by car number, so cast the widest
+        # possible net: every plate has at least one of these ten
+        # digits somewhere, so searching all of them finds every car.
+        await client.async_login()
+        found: dict[int, dict] = {}
+        for entry_date in entry_dates:
+            for digit in string.digits:
+                for row in await client.async_find_parked_entry(digit, entry_date):
+                    found[row["id"]] = row
+    except PwebAmanoError as err:
+        raise HomeAssistantError(str(err)) from err
+
+    return [
+        {
+            "car_no": row.get("carNo"),
+            "entry_date": row.get("entryDateToString"),
+            "minutes_parked": row.get("incar_min"),
+        }
+        for row in found.values()
+        if str(row.get("dscnt_cnt")) == "0"
+    ]
+
+
 def _async_register_discount(hass: HomeAssistant):
     async def _service(call: ServiceCall) -> None:
-        client = _async_resolve_client(hass, call.data.get(ATTR_DEVICE_ID))
-        car_no = call.data[ATTR_CAR_NO]
-
-        # Visitor cars are the common case, and the caller usually doesn't
-        # know (or care) whether the portal logged the entry as yesterday or
-        # today (e.g. an overnight visitor) - the portal has no ranged
-        # search, so search both days and take the first match, unless the
-        # caller pinned an explicit entry_date.
-        if call.data.get(ATTR_ENTRY_DATE):
-            candidate_dates = [call.data[ATTR_ENTRY_DATE]]
-        else:
-            today = date.today()
-            candidate_dates = [today - timedelta(days=1), today]
-
-        try:
-            parked = []
-            for candidate_date in candidate_dates:
-                parked = await client.async_find_parked_entry(
-                    car_no, candidate_date.strftime("%Y%m%d")
-                )
-                if parked:
-                    break
-
-            if not parked:
-                searched = ", ".join(d.strftime("%Y%m%d") for d in candidate_dates)
-                raise HomeAssistantError(
-                    f"차량 '{car_no}'을(를) 주차장에서 찾을 수 없습니다 "
-                    f"(entry_date={searched})"
-                )
-            await client.async_register_discount(
-                pe_id=parked[0]["id"],
-                car_no=car_no,
-                discount_type=call.data[ATTR_DISCOUNT_TYPE],
-                memo=call.data.get(ATTR_MEMO, ""),
-            )
-        except PwebAmanoError as err:
-            raise HomeAssistantError(str(err)) from err
+        await async_register_discount_for_car(
+            _async_resolve_client(hass, call.data.get(ATTR_DEVICE_ID)),
+            car_no=call.data[ATTR_CAR_NO],
+            discount_type=call.data[ATTR_DISCOUNT_TYPE],
+            memo=call.data.get(ATTR_MEMO, ""),
+            entry_date=call.data.get(ATTR_ENTRY_DATE),
+        )
 
     return _service
 
@@ -139,35 +194,7 @@ def _async_register_discount(hass: HomeAssistant):
 def _async_list_unregistered_vehicles(hass: HomeAssistant):
     async def _service(call: ServiceCall) -> ServiceResponse:
         client = _async_resolve_client(hass, call.data.get(ATTR_DEVICE_ID))
-        today = date.today()
-        entry_dates = [
-            (today - timedelta(days=offset)).strftime("%Y%m%d")
-            for offset in range(call.data[ATTR_DAYS])
-        ]
-
-        try:
-            # There's no "list every parked car" endpoint (see AGENTS.md) -
-            # the search only works by car number, so cast the widest
-            # possible net: every plate has at least one of these ten
-            # digits somewhere, so searching all of them finds every car.
-            await client.async_login()
-            found: dict[int, dict] = {}
-            for entry_date in entry_dates:
-                for digit in string.digits:
-                    for row in await client.async_find_parked_entry(digit, entry_date):
-                        found[row["id"]] = row
-        except PwebAmanoError as err:
-            raise HomeAssistantError(str(err)) from err
-
-        vehicles = [
-            {
-                "car_no": row.get("carNo"),
-                "entry_date": row.get("entryDateToString"),
-                "minutes_parked": row.get("incar_min"),
-            }
-            for row in found.values()
-            if str(row.get("dscnt_cnt")) == "0"
-        ]
+        vehicles = await async_find_unregistered_vehicles(client, call.data[ATTR_DAYS])
         return {"vehicles": vehicles}
 
     return _service
