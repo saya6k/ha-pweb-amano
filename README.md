@@ -33,20 +33,27 @@ Two services are available for on-demand actions:
 
 Each configured site registers its own LLM API — **Amano Parking — `<site name>`** — that you attach explicitly to a conversation agent; it's never added to the shared Assist API. In **Settings → Voice assistants**, edit an agent and pick it in the LLM API selector to give the agent four tools: check the discount balance and today's usage, list parked cars without a discount, register a discount for a parked car, and look up parking history (entry/exit times) for a date range. Requires Home Assistant 2026.10 or newer.
 
+<!-- ha-marketplace:exclude-start -->
 ## Installation (HACS)
 
 1. HACS → Integrations → ⋮ → Custom repositories → add this repo as an "Integration".
 2. Install **PWEB Amano**, restart Home Assistant.
-3. Settings → Devices & Services → Add Integration → **PWEB Amano**.
-4. Enter the numeric lot-area code from your portal's address (e.g. `12345` for `a12345.pweb.kr`), confirm the detected site name, then your ID and password.
-5. Optionally list car plates to track right away — this can also be added or edited later via Configure.
+<!-- ha-marketplace:exclude-end -->
 
+## Setup
+
+1. Settings → Devices & Services → Add Integration → **PWEB Amano**.
+2. Enter the numeric lot-area code from your portal's address (e.g. `12345` for `a12345.pweb.kr`), confirm the detected site name, then your ID and password.
+3. Optionally list car plates to track right away — this can also be added or edited later via Configure.
+
+<!-- ha-marketplace:exclude-start -->
 ## Development
 
 ```bash
 scripts/setup     # first time — installs HA + deps into config/
 scripts/develop   # boots HA on :8123 with this integration mounted
 ```
+<!-- ha-marketplace:exclude-end -->
 
 ## Security note
 
